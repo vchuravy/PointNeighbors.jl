@@ -31,7 +31,7 @@ struct NeighborListsNeighborhoodSearch{NDIMS, NHS, NL, PB}
 
     function NeighborListsNeighborhoodSearch{NDIMS}(search_radius, n_particles;
                                                     periodic_box_min_corner = nothing,
-                                                    periodic_box_max_corner = nothing
+                                                    periodic_box_max_corner = nothing,
                                                     backend = VectorOfVectors{Int}) where {
                                                                                            NDIMS
                                                                                            }
