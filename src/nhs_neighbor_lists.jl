@@ -31,17 +31,17 @@ struct NeighborListsNeighborhoodSearch{NDIMS, NHS, NL, PB}
 
     function NeighborListsNeighborhoodSearch{NDIMS}(search_radius, n_particles;
                                                     periodic_box_min_corner = nothing,
-                                                    periodic_box_max_corner = nothing) where {
-                                                                                              NDIMS
-                                                                                              }
+                                                    periodic_box_max_corner = nothing
+                                                    backend = VectorOfVectors{Int}) where {
+                                                                                           NDIMS
+                                                                                           }
         nhs = GridNeighborhoodSearch{NDIMS}(search_radius, n_particles,
                                             periodic_box_min_corner = periodic_box_min_corner,
                                             periodic_box_max_corner = periodic_box_max_corner)
 
-        neighbor_lists = Vector{Vector{Int}}()
+        neighbor_lists = backend()
 
-        new{NDIMS, typeof(nhs),
-            typeof(neighbor_lists),
+        new{NDIMS, typeof(nhs), typeof(neighbor_lists),
             typeof(nhs.periodic_box)}(nhs, neighbor_lists, nhs.periodic_box)
     end
 end
@@ -85,6 +85,17 @@ function initialize_neighbor_lists!(neighbor_lists, neighborhood_search, x, y)
     # Fill neighbor lists
     for_particle_neighbor(x, y, neighborhood_search) do particle, neighbor, _, _
         push!(neighbor_lists[particle], neighbor)
+    end
+end
+
+function initialize_neighbor_lists!(neighbor_lists::VectorOfVectors, neighborhood_search, x,
+                                    y)
+    neighbor_lists_ = Vector{Vector{Int}}()
+    initialize_neighbor_lists!(neighbor_lists_, neighborhood_search, x, y)
+
+    empty!(neighbor_lists)
+    for i in eachindex(neighbor_lists_)
+        push!(neighbor_lists, neighbor_lists_[i])
     end
 end
 
