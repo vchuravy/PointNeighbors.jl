@@ -1,7 +1,8 @@
 @doc raw"""
     NeighborListsNeighborhoodSearch{NDIMS}(search_radius, n_particles;
                                            periodic_box_min_corner = nothing,
-                                           periodic_box_max_corner = nothing)
+                                           periodic_box_max_corner = nothing,
+                                           backend = VectorOfVectors{Int32})
 
 Neighborhood search with precomputed neighbor lists. A list of all neighbors is computed
 for each particle during initialization and update.
@@ -23,6 +24,13 @@ initialization and update.
 - `periodic_box_max_corner`:    In order to use a (rectangular) periodic domain, pass the
                                 coordinates of the domain corner in positive coordinate
                                 directions.
+- `backend=VectorOfVectors{Int32}`: Data structure to store the neighbor lists. The default
+                                    `VectorOfVectors` is a data structure from
+                                    [ArraysOfArrays.jl](https://github.com/JuliaArrays/ArraysOfArrays.jl),
+                                    which behaves like a `Vector` of `Vector`s, but uses
+                                    a single `Vector` for a contiguous memory layout.
+                                    Use `backend=Vector{Vector{Int32}}` to benchmark
+                                    the benefits of this representation.
 """
 struct NeighborListsNeighborhoodSearch{NDIMS, NHS, NL, PB}
     neighborhood_search :: NHS
@@ -32,7 +40,7 @@ struct NeighborListsNeighborhoodSearch{NDIMS, NHS, NL, PB}
     function NeighborListsNeighborhoodSearch{NDIMS}(search_radius, n_particles;
                                                     periodic_box_min_corner = nothing,
                                                     periodic_box_max_corner = nothing,
-                                                    backend = VectorOfVectors{Int}) where {
+                                                    backend = VectorOfVectors{Int32}) where {
                                                                                            NDIMS
                                                                                            }
         nhs = GridNeighborhoodSearch{NDIMS}(search_radius, n_particles,
@@ -74,7 +82,8 @@ function update!(search::NeighborListsNeighborhoodSearch,
     end
 end
 
-function initialize_neighbor_lists!(neighbor_lists, neighborhood_search, x, y)
+function initialize_neighbor_lists!(neighbor_lists::Vector{<:Vector}, neighborhood_search,
+                                    x, y)
     # Initialize neighbor lists
     empty!(neighbor_lists)
     resize!(neighbor_lists, size(x, 2))
@@ -88,9 +97,8 @@ function initialize_neighbor_lists!(neighbor_lists, neighborhood_search, x, y)
     end
 end
 
-function initialize_neighbor_lists!(neighbor_lists::VectorOfVectors, neighborhood_search, x,
-                                    y)
-    neighbor_lists_ = Vector{Vector{Int}}()
+function initialize_neighbor_lists!(neighbor_lists, neighborhood_search, x, y)
+    neighbor_lists_ = Vector{Vector{Int32}}()
     initialize_neighbor_lists!(neighbor_lists_, neighborhood_search, x, y)
 
     empty!(neighbor_lists)
