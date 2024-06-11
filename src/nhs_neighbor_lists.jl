@@ -41,8 +41,8 @@ struct NeighborListsNeighborhoodSearch{NDIMS, NHS, NL, PB}
                                                     periodic_box_min_corner = nothing,
                                                     periodic_box_max_corner = nothing,
                                                     backend = VectorOfVectors{Int32}) where {
-                                                                                           NDIMS
-                                                                                           }
+                                                                                             NDIMS
+                                                                                             }
         nhs = GridNeighborhoodSearch{NDIMS}(search_radius, n_particles,
                                             periodic_box_min_corner = periodic_box_min_corner,
                                             periodic_box_max_corner = periodic_box_max_corner)
