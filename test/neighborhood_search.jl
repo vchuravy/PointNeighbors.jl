@@ -48,11 +48,16 @@
                 NeighborListsNeighborhoodSearch{NDIMS}(search_radius, n_particles,
                                                        periodic_box_min_corner = periodic_boxes[i][1],
                                                        periodic_box_max_corner = periodic_boxes[i][2]),
+                NeighborListsNeighborhoodSearch{NDIMS}(search_radius, n_particles,
+                                                       periodic_box_min_corner = periodic_boxes[i][1],
+                                                       periodic_box_max_corner = periodic_boxes[i][2],
+                                                       backend=Vector{Vector{Int32}}),
             ]
             neighborhood_searches_names = [
                 "`TrivialNeighborhoodSearch`",
                 "`GridNeighborhoodSearch`",
                 "`NeighborListsNeighborhoodSearch`",
+                "`NeighborListsNeighborhoodSearch` with `Vector{Vector}` backend",
             ]
 
             # Run this for every neighborhood search
@@ -119,11 +124,14 @@
             neighborhood_searches = [
                 GridNeighborhoodSearch{NDIMS}(search_radius, n_particles),
                 NeighborListsNeighborhoodSearch{NDIMS}(search_radius, n_particles),
+                NeighborListsNeighborhoodSearch{NDIMS}(search_radius, n_particles,
+                                                       backend=Vector{Vector{Int32}}),
             ]
 
             neighborhood_searches_names = [
                 "`GridNeighborhoodSearch`",
                 "`NeighborListsNeighborhoodSearch`",
+                "`NeighborListsNeighborhoodSearch` with `Vector{Vector}` backend",
             ]
 
             @testset "$(neighborhood_searches_names[i])" for i in eachindex(neighborhood_searches_names)
