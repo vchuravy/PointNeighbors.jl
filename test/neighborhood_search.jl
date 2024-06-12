@@ -51,7 +51,7 @@
                 NeighborListsNeighborhoodSearch{NDIMS}(search_radius, n_particles,
                                                        periodic_box_min_corner = periodic_boxes[i][1],
                                                        periodic_box_max_corner = periodic_boxes[i][2],
-                                                       backend=Vector{Vector{Int32}}),
+                                                       backend = Vector{Vector{Int32}}),
             ]
             neighborhood_searches_names = [
                 "`TrivialNeighborhoodSearch`",
@@ -125,7 +125,7 @@
                 GridNeighborhoodSearch{NDIMS}(search_radius, n_particles),
                 NeighborListsNeighborhoodSearch{NDIMS}(search_radius, n_particles),
                 NeighborListsNeighborhoodSearch{NDIMS}(search_radius, n_particles,
-                                                       backend=Vector{Vector{Int32}}),
+                                                       backend = Vector{Vector{Int32}}),
             ]
 
             neighborhood_searches_names = [
