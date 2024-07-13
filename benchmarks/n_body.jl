@@ -13,7 +13,7 @@ However, due to the higher computational cost, differences between neighborhood 
 implementations are less pronounced.
 """
 function benchmark_n_body(neighborhood_search, coordinates; parallel = true)
-    mass = 1e10 * (rand(size(coordinates, 2)) .+ 1)
+    mass = 1e10 * (rand!(similar(coordinates, size(coordinates, 2))) .+ 1)
     G = 6.6743e-11
 
     dv = similar(coordinates)
@@ -38,4 +38,10 @@ function benchmark_n_body(neighborhood_search, coordinates; parallel = true)
 
     return @belapsed $compute_acceleration!($dv, $coordinates, $mass, $G,
                                             $neighborhood_search, $parallel)
+end
+
+function benchmark_n_body_gpu(neighborhood_search, coordinates; parallel = true)
+    nhs_gpu = PointNeighbors.Adapt.adapt(ROCArray, neighborhood_search)
+    coordinates_gpu = convert(ROCArray, coordinates)
+    benchmark_n_body(nhs_gpu, coordinates_gpu)
 end

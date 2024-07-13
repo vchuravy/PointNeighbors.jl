@@ -1,8 +1,38 @@
 using Plots
 using BenchmarkTools
+import CellListMap
+using Morton
 
 # Generate a rectangular point cloud
 include("../test/point_cloud.jl")
+
+function point_cloud_z_index(n_points_per_dimension;
+                     seed = 1, perturbation_factor_position = 1.0)
+    # Fixed seed to ensure reproducibility
+    Random.seed!(seed)
+
+    n_dims = length(n_points_per_dimension)
+    coordinates = Array{Float64}(undef, n_dims, prod(n_points_per_dimension))
+    cartesian_indices = CartesianIndices(n_points_per_dimension)
+
+    for i in axes(coordinates, 2)
+        coordinates[:, i] .= Tuple(cartesian_indices[i])
+    end
+
+    min_corner = minimum(coordinates, dims = 2)
+
+    function z_index(coords)
+        cartesian3morton(SVector(Tuple(PointNeighbors.floor_to_int.((coords .- min_corner) ./ (3, 3, 3))) .+ 1))
+    end
+
+    coords_svector = reinterpret(SVector{3, Float64}, coordinates)
+    perm = coords_svector .|> z_index |> vec |> sortperm
+    coordinates2 = coordinates[:, perm]
+
+    perturb!(coordinates2, perturbation_factor_position * 0.5)
+
+    return coordinates2
+end
 
 """
     plot_benchmarks(benchmark, n_points_per_dimension, iterations;
@@ -38,9 +68,14 @@ plot_benchmarks(benchmark_count_neighbors, (10, 10), 3)
 function plot_benchmarks(benchmark, n_points_per_dimension, iterations;
                          parallel = true, title = "",
                          seed = 1, perturbation_factor_position = 1.0)
-    neighborhood_searches_names = ["TrivialNeighborhoodSearch";;
-                                   "GridNeighborhoodSearch";;
-                                   "PrecomputedNeighborhoodSearch"]
+    neighborhood_searches_names = [#"GridNeighborhoodSearch";;
+                                   #"GridNeighborhoodSearch with `PointWithCoordinates`";;
+                                #    "GNHS with `FullGridCellList`";;
+                                #    "GNHS with `FullGridCellList` and `PointWithCoordinates`";;]
+                                #   "PrecomputedNeighborhoodSearch";;
+                                #   "CellListMap.jl";;]
+                                    "original";;]
+                                    # "z-index";;]
 
     # Multiply number of points in each iteration (roughly) by this factor
     scaling_factor = 4
@@ -54,18 +89,41 @@ function plot_benchmarks(benchmark, n_points_per_dimension, iterations;
     for iter in 1:iterations
         coordinates = point_cloud(sizes[iter], seed = seed,
                                   perturbation_factor_position = perturbation_factor_position)
+        # coords_z_index = point_cloud_z_index(sizes[iter], seed = seed,
+        #                           perturbation_factor_position = perturbation_factor_position)
 
         search_radius = 3.0
         NDIMS = size(coordinates, 1)
         n_particles = size(coordinates, 2)
 
+        min_corner = minimum(coordinates, dims = 2) .- 1.02search_radius
+        max_corner = maximum(coordinates, dims = 2) .+ 1.02search_radius
+
         neighborhood_searches = [
-            TrivialNeighborhoodSearch{NDIMS}(; search_radius, eachpoint = 1:n_particles),
-            GridNeighborhoodSearch{NDIMS}(; search_radius, n_points = n_particles),
-            PrecomputedNeighborhoodSearch{NDIMS}(; search_radius, n_points = n_particles),
+            # TrivialNeighborhoodSearch{NDIMS}(; search_radius, eachpoint = 1:n_particles),
+            # GridNeighborhoodSearch{NDIMS}(; search_radius, n_points = n_particles, update_strategy=nothing),
+            # GridNeighborhoodSearch{NDIMS}(; cell_list = DictionaryCellList{PointNeighbors.PointWithCoordinates{NDIMS, Float64}, NDIMS}(),
+            #                               search_radius, n_points = n_particles, update_strategy=nothing),
+            GridNeighborhoodSearch{NDIMS}(; cell_list = FullGridCellList(; search_radius,
+                                                                         min_corner,
+                                                                         max_corner),
+                                          search_radius, n_points = n_particles, update_strategy=nothing),
+            # GridNeighborhoodSearch{NDIMS}(; cell_list = FullGridCellList(; search_radius,
+            #                                                              min_corner,
+            #                                                              max_corner),
+            #                               search_radius, n_points = n_particles, update_strategy=nothing),
+            # GridNeighborhoodSearch{NDIMS}(; cell_list = FullGridCellList(; search_radius,
+            #                                                              min_corner,
+            #                                                              max_corner, backend=PointNeighbors.DynamicVectorOfVectors{PointNeighbors.PointWithCoordinates{3, Float64}}),
+            #                               search_radius, n_points = n_particles, update_strategy=nothing),
+            # PrecomputedNeighborhoodSearch{NDIMS}(; search_radius, n_points = n_particles, update_strategy=nothing),
+            # CellListMapNeighborhoodSearch(NDIMS, search_radius),
         ]
 
         for i in eachindex(neighborhood_searches)
+            # if i == 2
+            #     coordinates = coords_z_index
+            # end
             neighborhood_search = neighborhood_searches[i]
             initialize!(neighborhood_search, coordinates, coordinates)
 
@@ -77,10 +135,11 @@ function plot_benchmarks(benchmark, n_points_per_dimension, iterations;
         end
     end
 
-    plot(n_particles_vec, times,
-         xaxis = :log, yaxis = :log,
-         xticks = (n_particles_vec, n_particles_vec),
-         xlabel = "#particles", ylabel = "Runtime [s]",
-         legend = :outerright, size = (750, 400), dpi = 200,
-         label = neighborhood_searches_names, title = title)
+    return n_particles_vec, times, neighborhood_searches_names
+    # plot(n_particles_vec, times,
+    #      xaxis = :log, yaxis = :log,
+    #      xticks = (n_particles_vec, n_particles_vec),
+    #      xlabel = "#particles", ylabel = "Runtime [s]",
+    #      legend = :outerright, size = (750, 400), dpi = 200,
+    #      label = neighborhood_searches_names, title = title)
 end
