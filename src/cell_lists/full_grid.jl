@@ -69,7 +69,7 @@ function FullGridCellList(; min_corner, max_corner, search_radius = 0.0,
         # Note that we don't shift everything so that the first cell starts at `min_corner`.
         # The first cell is the cell containing `min_corner`, so we need to add one layer
         # in order for `max_corner` to be inside a cell.
-        n_cells_per_dimension = ceil.(Int, (max_corner .- min_corner) ./ search_radius) .+ 1
+        n_cells_per_dimension = ceil.(Int32, (max_corner .- min_corner) ./ search_radius) .+ 1
         linear_indices = LinearIndices(Tuple(n_cells_per_dimension))
 
         cells = construct_backend(backend, n_cells_per_dimension, max_points_per_cell)
@@ -169,7 +169,7 @@ end
 @inline function cell_index(cell_list::FullGridCellList, cell::Tuple)
     (; linear_indices) = cell_list
 
-    return linear_indices[cell...]
+    return @inbounds linear_indices[cell...]
 end
 
 @inline cell_index(::FullGridCellList, cell::Integer) = cell
@@ -177,7 +177,7 @@ end
 @inline function Base.getindex(cell_list::FullGridCellList, cell)
     (; cells) = cell_list
 
-    return cells[cell_index(cell_list, cell)]
+    return @inbounds cells[cell_index(cell_list, cell)]
 end
 
 @inline function is_correct_cell(cell_list::FullGridCellList, cell_coords, cell_index_)

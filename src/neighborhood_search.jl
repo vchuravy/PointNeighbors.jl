@@ -156,7 +156,7 @@ end
 @inline function foreach_point_neighbor(f, system_coords, neighbor_coords,
                                         neighborhood_search, points, parallel::Val{true})
     @threaded system_coords for point in points
-        foreach_neighbor(f, system_coords, neighbor_coords, neighborhood_search, point)
+        @inbounds foreach_neighbor(f, system_coords, neighbor_coords, neighborhood_search, point)
     end
 
     return nothing
@@ -167,7 +167,7 @@ end
                                         neighborhood_search, points,
                                         backend::KernelAbstractions.Backend)
     @threaded backend for point in points
-        foreach_neighbor(f, system_coords, neighbor_coords, neighborhood_search, point)
+        @inbounds foreach_neighbor(f, system_coords, neighbor_coords, neighborhood_search, point)
     end
 
     return nothing
@@ -176,7 +176,7 @@ end
 @inline function foreach_point_neighbor(f, system_coords, neighbor_coords,
                                         neighborhood_search, points, parallel::Val{false})
     for point in points
-        foreach_neighbor(f, system_coords, neighbor_coords, neighborhood_search, point)
+        @inbounds foreach_neighbor(f, system_coords, neighbor_coords, neighborhood_search, point)
     end
 
     return nothing

@@ -1,6 +1,10 @@
 # Return the `i`-th column of the array `A` as an `SVector`.
 @inline function extract_svector(A, ::Val{NDIMS}, i) where {NDIMS}
-    return SVector(ntuple(@inline(dim->A[dim, i]), NDIMS))
+    # Explicit bounds check, which can be removed by calling this function with `@inbounds`
+    @boundscheck checkbounds(A, NDIMS, i)
+
+    # Assume inbounds access now
+    return SVector(ntuple(@inline(dim -> @inbounds A[dim, i]), NDIMS))
 end
 
 # When particles end up with coordinates so big that the cell coordinates
@@ -94,3 +98,8 @@ end
     i = @index(Global)
     @inline f(i)
 end
+
+# Copied from CUDA.jl
+struct Literal{T} end
+Base.:(*)(x::Number, ::Type{Literal{T}}) where {T} = T(x)
+const i32 = Literal{Int32}

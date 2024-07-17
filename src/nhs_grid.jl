@@ -58,7 +58,7 @@ struct GridNeighborhoodSearch{NDIMS, US, CL, ELTYPE, PB, UB} <: AbstractNeighbor
     cell_list       :: CL
     search_radius   :: ELTYPE
     periodic_box    :: PB
-    n_cells         :: NTuple{NDIMS, Int}    # Required to calculate periodic cell index
+    n_cells         :: NTuple{NDIMS, Int32}    # Required to calculate periodic cell index
     cell_size       :: NTuple{NDIMS, ELTYPE} # Required to calculate cell index
     update_buffer   :: UB                    # Multithreaded buffer for `update!`
     update_strategy :: US
@@ -81,7 +81,7 @@ function GridNeighborhoodSearch{NDIMS}(; search_radius = 0.0, n_points = 0,
 
     if search_radius < eps() || isnothing(periodic_box)
         # No periodicity
-        n_cells = ntuple(_ -> -1, Val(NDIMS))
+        n_cells = ntuple(_ -> -1i32, Val(NDIMS))
         cell_size = ntuple(_ -> search_radius, Val(NDIMS))
     else
         # Round up search radius so that the grid fits exactly into the domain without
@@ -89,7 +89,7 @@ function GridNeighborhoodSearch{NDIMS}(; search_radius = 0.0, n_points = 0,
         # cells mean that more potential neighbors are considered than necessary.
         # Allow small tolerance to avoid inefficient larger cells due to machine
         # rounding errors.
-        n_cells = Tuple(floor.(Int, (periodic_box.size .+ 10eps()) / search_radius))
+        n_cells = Tuple(floor.(Int32, (periodic_box.size .+ 10eps()) / search_radius))
         cell_size = Tuple(periodic_box.size ./ n_cells)
 
         if any(i -> i < 3, n_cells)
@@ -115,7 +115,7 @@ end
 end
 
 @inline function coordinates(point::Integer, x::AbstractMatrix, ::Val{NDIMS}) where {NDIMS}
-    return extract_svector(x, Val(NDIMS), point)
+    return @inbounds extract_svector(x, Val(NDIMS), point)
 end
 
 @inline coordinates(point::PointWithCoordinates, args...) = point.coordinates
@@ -367,8 +367,12 @@ end
                                   search_radius = search_radius(neighborhood_search))
     (; periodic_box) = neighborhood_search
 
-    point_coords = extract_svector(system_coords, Val(ndims(neighborhood_search)),
-                                   point_index)
+    # Explicit bounds check, which can be removed by calling this function with `@inbounds`
+    @boundscheck checkbounds(system_coords, ndims(neighborhood_search), point_index)
+
+    # Assume inbounds access now
+    point_coords = @inbounds extract_svector(system_coords, Val(ndims(neighborhood_search)),
+                                             point_index)
     cell = cell_coords(point_coords, neighborhood_search)
 
     for neighbor_cell_ in neighboring_cells(cell, neighborhood_search)
@@ -401,7 +405,7 @@ end
 
     # For `cell = (x, y, z)`, this returns Cartesian indices
     # {x-1, x, x+1} × {y-1, y, y+1} × {z-1, z, z+1}.
-    return CartesianIndices(ntuple(i -> (cell[i] - 1):(cell[i] + 1), NDIMS))
+    return CartesianIndices(ntuple(i -> (@inbounds cell[i] - 1):(@inbounds cell[i] + 1), NDIMS))
 end
 
 @inline function eachneighbor(coords, neighborhood_search::GridNeighborhoodSearch)
@@ -415,7 +419,7 @@ end
 @inline function points_in_cell(cell_index, neighborhood_search)
     (; cell_list) = neighborhood_search
 
-    return cell_list[periodic_cell_index(cell_index, neighborhood_search)]
+    return @inbounds cell_list[periodic_cell_index(cell_index, neighborhood_search)]
 end
 
 @inline function periodic_cell_index(cell_index, neighborhood_search)
