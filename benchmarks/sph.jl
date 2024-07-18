@@ -141,8 +141,56 @@ function benchmark_wcsph_gpu32(neighborhood_search, coordinates_; parallel = tru
     #     TrixiParticles.interact!(dv, v, u, v, u, nhs_gpu, system_gpu, system_gpu)
     # end
 
+    # @descend TrixiParticles.interact!(dv, v, u, v, u, nhs_gpu, system_gpu, system_gpu)
+
+    # return 1.0
     return @belapsed $(TrixiParticles.interact!)($dv, $v, $u, $v, $u, $nhs_gpu,
                                               $system_gpu, $system_gpu)
+end
+
+function benchmark_wcsph_cpu32(neighborhood_search, coordinates_; parallel = true)
+    coordinates = convert(Matrix{Float32}, coordinates_)
+    density = 1000f0
+    fluid = InitialCondition(; coordinates, density, mass = 0.1f0)
+
+    # Compact support == smoothing length for the Wendland kernel
+    smoothing_length = convert(Float32, PointNeighbors.search_radius(neighborhood_search))
+    smoothing_kernel = WendlandC2Kernel{ndims(neighborhood_search)}()
+
+    sound_speed = 10f0
+    state_equation = StateEquationCole(; sound_speed, reference_density = density,
+                                       exponent = 1)
+
+    fluid_density_calculator = ContinuityDensity()
+    viscosity = ArtificialViscosityMonaghan(alpha = 0.02f0, beta = 0.0f0)
+    density_diffusion = DensityDiffusionMolteniColagrossi(delta = 0.1f0)
+
+    fluid_system = WeaklyCompressibleSPHSystem(fluid, fluid_density_calculator,
+                                               state_equation, smoothing_kernel,
+                                               smoothing_length, viscosity = viscosity,
+                                               acceleration = (0f0, 0f0, 0f0),
+                                               density_diffusion = density_diffusion)
+
+    nhs2 = copy_neighborhood_search(neighborhood_search, smoothing_length, size(coordinates, 2))
+    initialize!(nhs2, coordinates, coordinates)
+
+    v = vcat(fluid.velocity, fluid.density')
+    u = coordinates
+    dv = zero(v)
+
+    # Initialize the system
+    TrixiParticles.initialize!(fluid_system, nhs2)
+    TrixiParticles.compute_pressure!(fluid_system, v)
+
+    # CUDA.@profile external=true begin
+    #     TrixiParticles.interact!(dv, v, u, v, u, nhs2, fluid_system, fluid_system)
+    # end
+
+    TrixiParticles.interact!(dv, v, u, v, u, nhs2, fluid_system, fluid_system)
+
+    return 1.0
+    # return @belapsed $(TrixiParticles.interact!)($dv, $v, $u, $v, $u, $nhs2,
+                                            #   $fluid_system, $fluid_system)
 end
 
 function benchmark_wcsph_gpu(neighborhood_search, coordinates; parallel = true)
