@@ -353,9 +353,10 @@ Base.@propagate_inbounds @inline function foreach_neighbor(f, system_coords, nei
     for neighbor_cell_ in neighboring_cells(cell, neighborhood_search)
         neighbor_cell = Tuple(neighbor_cell_)
 
-        pic = points_in_cell(neighbor_cell, neighborhood_search)
-        for i in eachindex(pic)
-            neighbor = @inbounds pic[i]
+        # This is faster than `for i in points` on the GPU, which adds a bounds check
+        points = points_in_cell(neighbor_cell, neighborhood_search)
+        for i in eachindex(points)
+            neighbor = @inbounds points[i]
             neighbor_coords = extract_svector(neighbor_system_coords,
                                               Val(ndims(neighborhood_search)), neighbor)
 
