@@ -28,7 +28,7 @@ end
 
     @boundscheck checkbounds(vov, i)
 
-    return view(backend, 1:lengths[i], i)
+    return @inbounds view(backend, 1:lengths[i], i)
 end
 
 @inline function Base.push!(vov::DynamicVectorOfVectors, vector::AbstractVector)
