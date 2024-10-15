@@ -156,6 +156,12 @@ function each_cell_index(cell_list::FullGridCellList{Nothing})
     error("`search_radius` is not defined for this cell list")
 end
 
+@inline function cell_index(cell_list::FullGridCellList, cell::CartesianIndex)
+    (; linear_indices) = cell_list
+
+    return linear_indices[cell]
+end
+
 @inline function cell_index(cell_list::FullGridCellList, cell::Tuple)
     (; linear_indices) = cell_list
 

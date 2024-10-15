@@ -345,8 +345,8 @@ end
     point_coords = extract_svector(system_coords, Val(ndims(neighborhood_search)), point)
     cell = cell_coords(point_coords, neighborhood_search)
 
-    for neighbor_cell_ in neighboring_cells(cell, neighborhood_search)
-        neighbor_cell = Tuple(neighbor_cell_)
+    for neighbor_cell in neighboring_cells(cell, neighborhood_search)
+        # neighbor_cell = Tuple(neighbor_cell_)
 
         for neighbor in points_in_cell(neighbor_cell, neighborhood_search)
             neighbor_coords = extract_svector(neighbor_system_coords,
@@ -371,6 +371,10 @@ end
 end
 
 @inline function neighboring_cells(cell, neighborhood_search)
+    return neighboring_cells(cell, neighborhood_search, neighborhood_search.cell_list)
+end
+
+@inline function neighboring_cells(cell, neighborhood_search, _)
     NDIMS = ndims(neighborhood_search)
 
     # For `cell = (x, y, z)`, this returns Cartesian indices
