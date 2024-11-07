@@ -145,7 +145,7 @@ end
     # Call the generic kernel that is defined below, which only calls a function with
     # the global GPU index.
     generic_kernel(backend)(ndrange = ndrange) do i
-        @inline f(iterator[indices[i]])
+        @inbounds @inline f(iterator[indices[i]])
     end
 
     KernelAbstractions.synchronize(backend)
